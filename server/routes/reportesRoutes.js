@@ -51,11 +51,13 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
       const L = doc.page.margins.left;
       const usableWidth =
         doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
       try {
         const fsSync = require("fs");
         if (fsSync.existsSync(logoPath))
           doc.image(logoPath, L, 25, { width: 60 });
       } catch {}
+
       doc
         .font("Helvetica-Bold")
         .fontSize(14)
@@ -68,12 +70,14 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
           L + 80,
           45
         );
+
       doc
         .moveTo(L, 65)
         .lineTo(L + usableWidth, 65)
         .strokeColor("#003366")
         .lineWidth(1)
         .stroke();
+
       doc.moveDown(1);
       doc
         .font("Helvetica-Bold")
@@ -82,8 +86,22 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         .text("INFORME DE INSPECCIÓN VEHICULAR", L, doc.y, {
           align: "left",
           width: usableWidth - 15,
-        })
-        .moveDown(0.5);
+        });
+
+      // === NUEVA LÍNEA: PÁGINA X DE Y ===
+      const range = doc.bufferedPageRange();
+      const currentPage = doc.pageNumber;
+      const totalPages = range.count || 1;
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor("#666")
+        .text(`Página ${currentPage} de ${totalPages}`, L, doc.y + 2, {
+          align: "left",
+          width: usableWidth - 15,
+        });
+
+      doc.moveDown(0.5);
       doc.font("Helvetica").fillColor("#000").fontSize(10);
     };
 
@@ -307,29 +325,29 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
     }
 
     // === FIRMAS ===
-// Calcula la posición 1 cm (~28 puntos) bajo la última fila de la tabla
-const firmaOffset = 56; 
-const firmaY = y + firmaOffset;
+    // Calcula la posición 1 cm (~28 puntos) bajo la última fila de la tabla
+    const firmaOffset = 56;
+    const firmaY = y + firmaOffset;
 
-doc.font("Helvetica-Bold").fillColor("#000");
+    doc.font("Helvetica-Bold").fillColor("#000");
 
-// Si no hay espacio suficiente, agrega nueva página
-if (firmaY > doc.page.height - 120) {
-  doc.addPage();
-  drawHeader();
-  doc.moveDown(3);
-}
+    // Si no hay espacio suficiente, agrega nueva página
+    if (firmaY > doc.page.height - 120) {
+      doc.addPage();
+      drawHeader();
+      doc.moveDown(3);
+    }
 
-// Posiciona las líneas de firmas
-const baseY = doc.y < firmaY ? firmaY : doc.y;
+    // Posiciona las líneas de firmas
+    const baseY = doc.y < firmaY ? firmaY : doc.y;
 
-doc.text("_____________________________", L(), baseY);
-doc.text(`Conductor: ${data.conductor}`, L() + 15, baseY + 12);
-if (data.rut_conductor)
-  doc.text(`RUT: ${data.rut_conductor}`, L() + 15, baseY + 24);
+    doc.text("_____________________________", L(), baseY);
+    doc.text(`Conductor: ${data.conductor}`, L() + 15, baseY + 12);
+    if (data.rut_conductor)
+      doc.text(`RUT: ${data.rut_conductor}`, L() + 15, baseY + 24);
 
-doc.text("_____________________________", L() + 260, baseY);
-doc.text("Supervisor:", L() + 270, baseY + 12);
+    doc.text("_____________________________", L() + 260, baseY);
+    doc.text("Supervisor:", L() + 270, baseY + 12);
 
     doc.end();
   } catch (err) {
